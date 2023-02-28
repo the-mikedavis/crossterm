@@ -65,6 +65,13 @@ pub fn supports_keyboard_enhancement() -> Result<bool> {
     Ok(false)
 }
 
+/// Queries the terminal's support for synchronized output.
+///
+/// This always returns `Ok(false)` on Windows.
+pub fn supports_synchronized_output() -> Result<bool> {
+    Ok(false)
+}
+
 pub(crate) fn clear(clear_type: ClearType) -> Result<()> {
     let screen_buffer = ScreenBuffer::current()?;
     let csbi = screen_buffer.info()?;

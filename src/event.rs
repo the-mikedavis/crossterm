@@ -941,6 +941,9 @@ pub(crate) enum InternalEvent {
     /// Attributes and architectural class of the terminal.
     #[cfg(unix)]
     PrimaryDeviceAttributes,
+    /// Whether the terminal supports synchronized output.
+    #[cfg(unix)]
+    SynchronizedOutputSupport(bool),
 }
 
 #[cfg(test)]

@@ -98,7 +98,7 @@ use crate::{csi, impl_display, Result};
 
 pub(crate) mod sys;
 
-pub use sys::supports_keyboard_enhancement;
+pub use sys::{supports_keyboard_enhancement, supports_synchronized_output};
 
 /// Tells whether the raw mode is enabled.
 ///

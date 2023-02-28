@@ -37,6 +37,24 @@ impl Filter for KeyboardEnhancementFlagsFilter {
 
 #[cfg(unix)]
 #[derive(Debug, Clone)]
+pub(crate) struct SynchronizedOutputSupportFilter;
+
+#[cfg(unix)]
+impl Filter for SynchronizedOutputSupportFilter {
+    fn eval(&self, event: &InternalEvent) -> bool {
+        // This filter checks for either a SynchronizedOutputSupport response or
+        // a PrimaryDeviceAttributes response. If we receive the PrimaryDeviceAttributes
+        // response but not the SynchronizedOutputSupport, the terminal does not support
+        // synchronized output or DECRPM reports.
+        matches!(
+            *event,
+            InternalEvent::SynchronizedOutputSupport(_) | InternalEvent::PrimaryDeviceAttributes
+        )
+    }
+}
+
+#[cfg(unix)]
+#[derive(Debug, Clone)]
 pub(crate) struct PrimaryDeviceAttributesFilter;
 
 #[cfg(unix)]

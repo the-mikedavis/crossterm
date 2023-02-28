@@ -181,6 +181,7 @@ pub(crate) fn parse_csi(buffer: &[u8]) -> Result<Option<InternalEvent>> {
         b'?' => match buffer[buffer.len() - 1] {
             b'u' => return parse_csi_keyboard_enhancement_flags(buffer),
             b'c' => return parse_csi_primary_device_attributes(buffer),
+            b'y' => return parse_csi_decrpm_report(buffer),
             _ => None,
         },
         b'0'..=b'9' => {
@@ -290,7 +291,7 @@ fn parse_csi_keyboard_enhancement_flags(buffer: &[u8]) -> Result<Option<Internal
 }
 
 fn parse_csi_primary_device_attributes(buffer: &[u8]) -> Result<Option<InternalEvent>> {
-    // ESC [ 64 ; attr1 ; attr2 ; ... ; attrn ; c
+    // ESC [ ? 64 ; attr1 ; attr2 ; ... ; attrn ; c
     assert!(buffer.starts_with(&[b'\x1B', b'[', b'?']));
     assert!(buffer.ends_with(&[b'c']));
 
@@ -299,6 +300,49 @@ fn parse_csi_primary_device_attributes(buffer: &[u8]) -> Result<Option<InternalE
     // See <https://vt100.net/docs/vt510-rm/DA1.html>
 
     Ok(Some(InternalEvent::PrimaryDeviceAttributes))
+}
+
+fn parse_csi_decrpm_report(buffer: &[u8]) -> Result<Option<InternalEvent>> {
+    // ESC [ ? Pd ; Ps $ y
+    //
+    // Pd indicates which DEC mode the terminal is reporting on.
+    // Ps indicates the setting of the mode:
+    //
+    // | Ps | Mode Setting
+    // |--- |---
+    // | 0  | Mode not recognized
+    // | 1  | Set
+    // | 2  | Reset
+    // | 3  | Permanently set
+    // | 4  | Permanently reset
+    //
+    // See <https://vt100.net/docs/vt510-rm/DECRPM.html>
+    assert!(buffer.starts_with(&[b'\x1B', b'[', b'?']));
+    assert!(buffer.ends_with(&[b'y']));
+
+    let s = std::str::from_utf8(&buffer[2..buffer.len() - 1])
+        .map_err(|_| could_not_parse_event_error())?;
+    let mut split = s.split(';');
+
+    if next_parsed::<u16>(&mut split)? == 2026 {
+        // <https://gist.github.com/christianparpart/d8a62cc1ab659194337d73e399004036>
+        //
+        // | Ps | Relevance for synchronized output mode
+        // |--- |---
+        // | 0  | not supported
+        // | 1  | supported and screen updates are not shown to the user until mode is disabled
+        // | 2  | supported and screen updates are shown as usual (e.g. as soon as they arrive)
+        // | 3  | undefined
+        // | 4  | not supported
+        let supported = match next_parsed::<u8>(&mut split)? {
+            1 | 2 => true,
+            _ => false,
+        };
+
+        return Ok(Some(InternalEvent::SynchronizedOutputSupport(supported)));
+    }
+
+    Err(could_not_parse_event_error())
 }
 
 fn parse_modifiers(mask: u8) -> KeyModifiers {
