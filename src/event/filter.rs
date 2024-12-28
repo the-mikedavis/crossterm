@@ -1,4 +1,4 @@
-use crate::event::InternalEvent;
+use crate::event::{Event, InternalEvent};
 
 /// Interface for filtering an `InternalEvent`.
 pub(crate) trait Filter: Send + Sync + 'static {
@@ -43,6 +43,22 @@ pub(crate) struct PrimaryDeviceAttributesFilter;
 impl Filter for PrimaryDeviceAttributesFilter {
     fn eval(&self, event: &InternalEvent) -> bool {
         matches!(*event, InternalEvent::PrimaryDeviceAttributes)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ThemeModeFilter;
+
+impl Filter for ThemeModeFilter {
+    fn eval(&self, event: &InternalEvent) -> bool {
+        // See `KeyboardEnhancementFlagsFilter` above: `PrimaryDeviceAttributes` is
+        // used to elicit a response from the terminal even if it doesn't support the
+        // theme mode query.
+        matches!(
+            *event,
+            InternalEvent::Event(Event::ThemeModeChanged(_))
+                | InternalEvent::PrimaryDeviceAttributes
+        )
     }
 }
 

@@ -540,6 +540,54 @@ impl Command for PopKeyboardEnhancementFlags {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EnableColorSchemeUpdates;
+
+impl Command for EnableColorSchemeUpdates {
+    fn write_ansi(&self, f: &mut impl fmt::Write) -> fmt::Result {
+        f.write_str(csi!("?2031h"))
+    }
+
+    #[cfg(windows)]
+    fn execute_winapi(&self) -> std::io::Result<()> {
+        use std::io;
+
+        Err(io::Error::new(
+            io::ErrorKind::Unsupported,
+            "Color scheme updates are not implemented for the legacy Windows API",
+        ))
+    }
+
+    #[cfg(windows)]
+    fn is_ansi_code_supported(&self) -> bool {
+        false
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DisableColorSchemeUpdates;
+
+impl Command for DisableColorSchemeUpdates {
+    fn write_ansi(&self, f: &mut impl fmt::Write) -> fmt::Result {
+        f.write_str(csi!("?2031l"))
+    }
+
+    #[cfg(windows)]
+    fn execute_winapi(&self) -> std::io::Result<()> {
+        use std::io;
+
+        Err(io::Error::new(
+            io::ErrorKind::Unsupported,
+            "Color scheme updates are not implemented for the legacy Windows API",
+        ))
+    }
+
+    #[cfg(windows)]
+    fn is_ansi_code_supported(&self) -> bool {
+        false
+    }
+}
+
 /// Represents an event.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(not(feature = "bracketed-paste"), derive(Copy))]
@@ -560,6 +608,7 @@ pub enum Event {
     /// An resize event with new dimensions after resize (columns, rows).
     /// **Note** that resize events can occur in batches.
     Resize(u16, u16),
+    ThemeModeChanged(ThemeMode),
 }
 
 /// Represents a mouse event.
@@ -1183,6 +1232,12 @@ pub(crate) enum InternalEvent {
     /// Attributes and architectural class of the terminal.
     #[cfg(unix)]
     PrimaryDeviceAttributes,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum ThemeMode {
+    Light,
+    Dark,
 }
 
 #[cfg(test)]
